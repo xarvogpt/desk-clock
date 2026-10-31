@@ -1,0 +1,564 @@
+<title>책상 시계</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Azeret+Mono:wght@300;400;500&family=IBM+Plex+Sans+KR:wght@300;400;500&display=swap">
+<style>
+/* 레이아웃: 검은 화면을 세로 실선 하나로 나눔. 왼쪽은 60분 링 타이머 + 시각, 오른쪽은 날짜·달력·날씨. 세로 화면이면 위아래로 쌓음 */
+:root {
+  --bg: #000000;
+  --panel: #111110;
+  --fg: #f1efea;
+  --muted: #7f7b75;
+  --line: #262523;
+  --ring-off: #1d1c1b;
+  --accent: #ff5631;
+  --sun: #ff705a;
+  --sat: #7aa2ff;
+  --f-digit: "Azeret Mono", ui-monospace, Menlo, Consolas, monospace;
+  --f-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #f3f1ec; --panel: #ffffff; --fg: #191816; --muted: #77726b; --line: #dad6cf;
+    --ring-off: #e2ded7; --accent: #e5401c; --sun: #d23a22; --sat: #2f5fc0; color-scheme: light;
+  }
+}
+:root[data-theme="light"] {
+  --bg: #f3f1ec; --panel: #ffffff; --fg: #191816; --muted: #77726b; --line: #dad6cf;
+  --ring-off: #e2ded7; --accent: #e5401c; --sun: #d23a22; --sat: #2f5fc0; color-scheme: light;
+}
+
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body {
+  background: var(--bg); color: var(--fg); font-family: var(--f-body); font-weight: 300;
+  box-sizing: border-box; overflow: hidden;
+  padding-block: 20px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  -webkit-tap-highlight-color: transparent;
+}
+button { font: inherit; color: inherit; }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.app { height: 100%; display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); }
+
+/* 왼쪽: 시계 + 타이머 */
+.clock { min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2.4vh; padding-right: 2vw; }
+.ring { width: min(100%, 78vh); max-width: 100%; aspect-ratio: 1; touch-action: none; user-select: none; -webkit-user-select: none; cursor: pointer; }
+.ring .seg { fill: var(--ring-off); }
+.ring .seg.on { fill: var(--accent); }
+.ring .tick { fill: var(--muted); font-family: var(--f-digit); font-size: 6.5px; }
+.ring .handle { fill: var(--fg); }
+.ring .now { fill: var(--fg); font-family: var(--f-digit); font-size: 24px; font-weight: 300; letter-spacing: -.5px; }
+.ring .now .sec { fill: var(--muted); }
+.ring .ampm { fill: var(--muted); font-size: 7px; letter-spacing: 1px; }
+.ring .timer { fill: var(--accent); font-family: var(--f-digit); font-size: 13px; font-weight: 400; }
+.ring .hint { fill: var(--muted); font-size: 5.5px; }
+
+.controls { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.btn { border: 1px solid var(--line); background: transparent; border-radius: 999px; padding: .55em 1.15em; font-size: clamp(14px, 2vh, 18px); cursor: pointer; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 500; min-width: 6.5em; }
+.btn.chip { font-family: var(--f-digit); color: var(--muted); font-size: clamp(13px, 1.8vh, 16px); padding: .45em .95em; }
+
+/* 오른쪽: 날짜·달력·날씨 */
+.side { min-height: 0; min-width: 0; border-left: 1px solid var(--line); padding: 1vh 0 1vh 3.2vw; display: flex; flex-direction: column; gap: 3.2vh; overflow: hidden; }
+.side-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.year { color: var(--muted); font-family: var(--f-digit); font-size: clamp(13px, 2vh, 18px); letter-spacing: .08em; }
+.date { font-size: clamp(34px, 8.5vh, 80px); font-weight: 300; line-height: 1.05; letter-spacing: -.02em; margin-top: .15em; }
+.dow { font-size: clamp(18px, 3.4vh, 32px); color: var(--muted); margin-top: .15em; }
+.dow.sun { color: var(--sun); }
+.dow.sat { color: var(--sat); }
+.icons { display: flex; gap: 4px; flex-shrink: 0; }
+.icon-btn { width: 44px; height: 44px; border-radius: 50%; border: 0; background: transparent; display: grid; place-items: center; cursor: pointer; opacity: .6; }
+.icon-btn:hover { opacity: 1; }
+.icon-btn svg { width: 22px; height: 22px; stroke: var(--fg); fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+
+.cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: .2vh 0; text-align: center; font-family: var(--f-digit); font-size: clamp(12px, 2.1vh, 18px); max-width: 30em; }
+.cal .h { font-family: var(--f-body); color: var(--muted); font-size: .78em; padding-bottom: .6vh; }
+.cal span { padding: .5vh 0; border-radius: 999px; }
+.cal .sun { color: var(--sun); }
+.cal .sat { color: var(--sat); }
+.cal .past { opacity: .35; }
+.cal .today { background: var(--accent); color: #fff; opacity: 1; font-weight: 500; }
+.cal .blank { visibility: hidden; }
+
+.weather { margin-top: auto; display: grid; grid-template-columns: auto 1fr; gap: 0 1.6vw; align-items: center; }
+.w-temp { font-family: var(--f-digit); font-weight: 300; font-size: clamp(40px, 10vh, 92px); line-height: .9; letter-spacing: -.04em; }
+.w-cond { font-size: clamp(16px, 2.8vh, 26px); font-weight: 400; }
+.w-place { color: var(--muted); font-size: clamp(12px, 1.8vh, 15px); margin-top: .2em; }
+.w-meta { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: .3em 1.4em; color: var(--muted); font-size: clamp(12px, 1.9vh, 16px); margin-top: 1.6vh; }
+.w-meta b { color: var(--fg); font-weight: 400; font-family: var(--f-digit); }
+.w-empty { grid-column: 1 / -1; color: var(--muted); font-size: clamp(14px, 2.1vh, 18px); display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+
+/* 타이머 끝 알림 화면 */
+.alarm { position: fixed; inset: 0; z-index: 30; background: var(--accent); color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3vh; text-align: center; cursor: pointer;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); animation: alarm 1s steps(1) infinite; }
+.alarm-title { font-size: clamp(48px, 14vh, 140px); font-weight: 500; letter-spacing: -.02em; }
+.alarm-sub { font-size: clamp(16px, 3vh, 28px); opacity: .85; }
+.alarm-btn { margin-top: 2vh; font-size: clamp(18px, 3.4vh, 30px); padding: .6em 2.2em; border-radius: 999px; border: 2px solid #fff; background: transparent; color: #fff; cursor: pointer; }
+@keyframes alarm { 50% { background: #000; } }
+
+/* 설정 창 */
+.sheet-wrap { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: grid; place-items: center; padding: 16px; z-index: 20; }
+.sheet { background: var(--panel); color: var(--fg); border: 1px solid var(--line); border-radius: 20px; width: min(520px, 100%); max-height: 100%; overflow: auto; padding: 24px; display: flex; flex-direction: column; gap: 22px; font-weight: 400; }
+.sheet h2 { margin: 0; font-size: 20px; font-weight: 500; }
+.field { display: flex; flex-direction: column; gap: 8px; }
+.field > label, .field > .lbl { font-weight: 500; font-size: 15px; }
+.field small { color: var(--muted); }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.row input[type=text] { flex: 1; min-width: 0; padding: .6em .9em; border-radius: 12px; border: 1px solid var(--line); background: var(--bg); color: var(--fg); font: inherit; }
+.results { display: flex; flex-direction: column; gap: 4px; }
+.results button { text-align: left; padding: .6em .9em; border-radius: 12px; border: 1px solid var(--line); background: var(--bg); cursor: pointer; }
+.seg-ctl { display: inline-flex; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; align-self: flex-start; }
+.seg-ctl input { position: absolute; opacity: 0; pointer-events: none; }
+.seg-ctl label { padding: .5em 1em; cursor: pointer; }
+.seg-ctl input:checked + label { background: var(--accent); color: #fff; }
+.seg-ctl input:focus-visible + label { outline: 2px solid var(--accent); outline-offset: -2px; }
+.sheet .foot { display: flex; justify-content: flex-end; }
+
+@media (max-aspect-ratio: 1/1), (max-width: 700px) {
+  body { overflow: auto; height: auto; }
+  .app { grid-template-columns: 1fr; height: auto; gap: 24px; }
+  .clock { padding-right: 0; }
+  .ring { width: min(100%, 520px); }
+  .side { border-left: 0; border-top: 1px solid var(--line); padding: 24px 0 0; }
+  .weather { margin-top: 0; }
+}
+@media (prefers-reduced-motion: reduce) { .alarm { animation: none; } }
+</style>
+
+<div class="app">
+  <section class="clock">
+    <svg class="ring" id="ring" viewBox="-104 -104 208 208" aria-label="60분 타이머. 링을 끌어서 시간을 정하고 가운데를 눌러 시작">
+      <g id="segs"></g>
+      <g id="ticks"></g>
+      <circle id="handle" class="handle" r="3.2" cx="0" cy="-79"></circle>
+      <text id="tAmpm" class="ampm" x="0" y="-22" text-anchor="middle"></text>
+      <text class="now" x="0" y="6" text-anchor="middle"><tspan id="tHM">--:--</tspan><tspan id="tSec" class="sec">:--</tspan></text>
+      <text id="tTimer" class="timer" x="0" y="30" text-anchor="middle">00:00</text>
+      <text id="tHint" class="hint" x="0" y="43" text-anchor="middle">링을 끌어 시간 설정</text>
+    </svg>
+    <div class="controls">
+      <button class="btn primary" id="bStart" type="button">시작</button>
+      <button class="btn" id="bReset" type="button">초기화</button>
+      <button class="btn chip" type="button" data-min="5">5분</button>
+      <button class="btn chip" type="button" data-min="10">10분</button>
+      <button class="btn chip" type="button" data-min="25">25분</button>
+      <button class="btn chip" type="button" data-min="50">50분</button>
+    </div>
+  </section>
+
+  <section class="side">
+    <div class="side-top">
+      <div>
+        <div class="year" id="dYear"></div>
+        <div class="date" id="dDate"></div>
+        <div class="dow" id="dDow"></div>
+      </div>
+      <div class="icons">
+        <button class="icon-btn" id="bFull" type="button" aria-label="전체 화면">
+          <svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+        </button>
+        <button class="icon-btn" id="bSettings" type="button" aria-label="설정">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="cal" id="cal" aria-label="이번 달 달력"></div>
+
+    <div class="weather" id="weather"></div>
+  </section>
+</div>
+
+<div class="alarm" id="alarm" hidden role="alertdialog" aria-labelledby="alarmTitle">
+  <div class="alarm-title" id="alarmTitle">타이머 끝</div>
+  <div class="alarm-sub" id="alarmSub"></div>
+  <button class="alarm-btn" type="button">끄기</button>
+</div>
+
+<div class="sheet-wrap" id="sheetWrap" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+    <h2 id="sheetTitle">설정</h2>
+
+    <div class="field">
+      <label for="placeQ">날씨 지역</label>
+      <small id="placeNow">아직 고르지 않았어요</small>
+      <form class="row" id="placeForm">
+        <input type="text" id="placeQ" placeholder="예: 서울, 수원시, Busan" autocomplete="off">
+        <button class="btn" type="submit">검색</button>
+      </form>
+      <div class="results" id="placeResults"></div>
+    </div>
+
+    <div class="field">
+      <span class="lbl">타이머 끝 알림 소리</span>
+      <div class="row">
+        <div class="seg-ctl">
+          <input type="radio" name="vol" id="v0" value="0"><label for="v0">끄기</label>
+          <input type="radio" name="vol" id="v1" value="1"><label for="v1">작게</label>
+          <input type="radio" name="vol" id="v2" value="2"><label for="v2">보통</label>
+          <input type="radio" name="vol" id="v3" value="3"><label for="v3">크게</label>
+        </div>
+        <button class="btn" type="button" id="bTest">소리 시험</button>
+      </div>
+      <small>태블릿의 미디어 음량도 올려 두세요. 소리는 화면을 누를 때까지 계속 납니다(최대 3분).</small>
+    </div>
+
+    <div class="field">
+      <span class="lbl">시각 표시</span>
+      <div class="seg-ctl">
+        <input type="radio" name="hfmt" id="h24" value="24"><label for="h24">24시간</label>
+        <input type="radio" name="hfmt" id="h12" value="12"><label for="h12">오전/오후</label>
+      </div>
+    </div>
+
+    <div class="field">
+      <span class="lbl">화면 테마</span>
+      <div class="seg-ctl">
+        <input type="radio" name="theme" id="thDark" value="dark"><label for="thDark">검정</label>
+        <input type="radio" name="theme" id="thLight" value="light"><label for="thLight">밝게</label>
+        <input type="radio" name="theme" id="thAuto" value="auto"><label for="thAuto">기기 설정 따름</label>
+      </div>
+      <small>시각은 이 기기의 시계를 씁니다. 기기 설정에서 "자동 날짜 및 시간"을 켜 두세요.</small>
+    </div>
+
+    <div class="foot"><button class="btn primary" id="bClose" type="button">닫기</button></div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var $ = function (s) { return document.querySelector(s); };
+  var store = {
+    get: function (k, d) { try { var v = localStorage.getItem('deskclock.' + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+    set: function (k, v) { try { localStorage.setItem('deskclock.' + k, JSON.stringify(v)); } catch (e) {} }
+  };
+  var settings = Object.assign({ hour12: false, volume: 3, theme: 'dark', place: null }, store.get('settings', {}));
+  if (typeof settings.sound === 'boolean') { settings.volume = settings.sound ? 3 : 0; delete settings.sound; }
+  var timer = Object.assign({ status: 'idle', endAt: 0, remainingMs: 0, setMs: 0 }, store.get('timer', {}));
+  if (timer.status === 'done') timer = { status: 'idle', endAt: 0, remainingMs: 0, setMs: 0 };
+
+  var DOW = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'];
+  var pad = function (n) { return (n < 10 ? '0' : '') + n; };
+
+  /* ---------- 링 그리기 (일반 시계처럼 맨 위 0에서 시계 방향) ---------- */
+  var R1 = 74, R2 = 84;
+  function pt(r, a) { var t = a * Math.PI / 180; return (r * Math.sin(t)).toFixed(2) + ' ' + (-r * Math.cos(t)).toFixed(2); }
+  // k번째 칸: k분 ~ k+1분 위치 (맨 위 0분, 시계 방향)
+  var segEls = [];
+  (function buildRing() {
+    var ns = 'http://www.w3.org/2000/svg', segs = $('#segs'), ticks = $('#ticks');
+    for (var k = 0; k < 60; k++) {
+      var a0 = k * 6 + 0.9, a1 = (k + 1) * 6 - 0.9;
+      var p = document.createElementNS(ns, 'path');
+      p.setAttribute('class', 'seg');
+      p.setAttribute('d', 'M' + pt(R2, a0) + ' A' + R2 + ' ' + R2 + ' 0 0 1 ' + pt(R2, a1) +
+        ' L' + pt(R1, a1) + ' A' + R1 + ' ' + R1 + ' 0 0 0 ' + pt(R1, a0) + 'Z');
+      segs.appendChild(p); segEls.push(p);
+    }
+    for (var m = 0; m < 60; m += 5) {
+      var t = document.createElementNS(ns, 'text'), a = m * 6 * Math.PI / 180;
+      t.setAttribute('class', 'tick');
+      t.setAttribute('x', (94 * Math.sin(a)).toFixed(2));
+      t.setAttribute('y', (-94 * Math.cos(a) + 2.3).toFixed(2));
+      t.setAttribute('text-anchor', 'middle');
+      t.textContent = m;
+      ticks.appendChild(t);
+    }
+  })();
+
+  /* ---------- 타이머 ---------- */
+  function remaining(now) {
+    if (timer.status === 'running') return Math.max(0, timer.endAt - now);
+    return timer.remainingMs;
+  }
+  function save() { store.set('timer', timer); }
+  function setMinutes(m) {
+    var ms = m * 60000;
+    if (m <= 0) { timer = { status: 'idle', endAt: 0, remainingMs: 0, setMs: 0 }; }
+    else if (timer.status === 'running') { timer.endAt = Date.now() + ms; timer.setMs = ms; }
+    else { timer = { status: 'paused', endAt: 0, remainingMs: ms, setMs: ms }; }
+    save(); render(); schedule();
+  }
+  function toggle() {
+    var now = Date.now();
+    if (timer.status === 'done') { reset(); return; }
+    if (timer.status === 'running') { timer = { status: 'paused', endAt: 0, remainingMs: Math.max(0, timer.endAt - now), setMs: timer.setMs }; }
+    else if (timer.remainingMs > 0) { ensureAudio(); timer = { status: 'running', endAt: now + timer.remainingMs, remainingMs: 0, setMs: timer.setMs || timer.remainingMs }; }
+    save(); render(); schedule();
+  }
+  function reset() { stopAlarm(); timer = { status: 'idle', endAt: 0, remainingMs: 0, setMs: 0 }; save(); render(); schedule(); }
+  function finish() {
+    var setMin = Math.round((timer.setMs || 0) / 60000);
+    timer = { status: 'done', endAt: 0, remainingMs: 0, setMs: 0 }; save();
+    startAlarm(setMin);
+  }
+
+  /* ---------- 알림 소리 ---------- */
+  var GAIN = [0, 0.12, 0.35, 0.9];
+  var audio = null, alarmLoop = null, alarmStop = null;
+  function ensureAudio() {
+    try {
+      if (!audio) { var AC = window.AudioContext || window.webkitAudioContext; if (AC) audio = new AC(); }
+      if (audio && audio.state === 'suspended') audio.resume();
+    } catch (e) {}
+  }
+  // 주방 타이머처럼 높은 음 두 개를 번갈아 네 번 울림 (1초 주기)
+  function beep(vol) {
+    var g0 = GAIN[vol == null ? settings.volume : vol] || 0;
+    if (!g0 || !audio) return;
+    var t0 = audio.currentTime + 0.02;
+    for (var i = 0; i < 4; i++) {
+      var o = audio.createOscillator(), g = audio.createGain(), s = t0 + i * 0.16;
+      o.type = 'square'; o.frequency.value = i % 2 ? 2350 : 1870;
+      o.connect(g); g.connect(audio.destination);
+      g.gain.setValueAtTime(0.0001, s); g.gain.exponentialRampToValueAtTime(g0, s + 0.008);
+      g.gain.setValueAtTime(g0, s + 0.1); g.gain.exponentialRampToValueAtTime(0.0001, s + 0.12);
+      o.start(s); o.stop(s + 0.13);
+    }
+    try { if (navigator.vibrate) navigator.vibrate([300, 100, 300]); } catch (e) {}
+  }
+  function startAlarm(setMin) {
+    var d = new Date();
+    $('#alarmSub').textContent = (setMin ? setMin + '분 타이머 · ' : '') + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ' 종료 · 화면을 누르면 꺼져요';
+    $('#alarm').hidden = false;
+    ensureAudio(); beep(); alarmLoop = setInterval(beep, 1000);
+    alarmStop = setTimeout(function () { clearInterval(alarmLoop); alarmLoop = null; }, 180000);
+  }
+  function stopAlarm() {
+    $('#alarm').hidden = true;
+    clearInterval(alarmLoop); clearTimeout(alarmStop); alarmLoop = alarmStop = null;
+    try { if (navigator.vibrate) navigator.vibrate(0); } catch (e) {}
+  }
+  $('#alarm').addEventListener('click', function () { reset(); });
+
+  /* ---------- 화면 그리기 ---------- */
+  var lastDay = '';
+  function render() {
+    var now = Date.now(), d = new Date(now);
+    if (timer.status === 'running' && now >= timer.endAt) finish();
+
+    var h = d.getHours(), hh = h;
+    if (settings.hour12) { hh = h % 12 || 12; $('#tAmpm').textContent = h < 12 ? '오전' : '오후'; }
+    else $('#tAmpm').textContent = '';
+    $('#tHM').textContent = (settings.hour12 ? hh : pad(hh)) + ':' + pad(d.getMinutes());
+    $('#tSec').textContent = ':' + pad(d.getSeconds());
+
+    var rem = remaining(now), secs = Math.ceil(rem / 1000), mins = Math.ceil(rem / 60000);
+    $('#tTimer').textContent = timer.status === 'done' ? '끝' : pad(Math.floor(secs / 60)) + ':' + pad(secs % 60);
+    $('#tHint').textContent =
+      timer.status === 'running' ? '가운데를 눌러 일시정지' :
+      timer.status === 'paused' ? '가운데를 눌러 시작' :
+      timer.status === 'done' ? '눌러서 끄기' : '링을 끌어 시간 설정';
+    for (var k = 0; k < 60; k++) segEls[k].classList.toggle('on', k < mins);
+    var a = (rem / 60000) * 6 * Math.PI / 180, rm = (R1 + R2) / 2;
+    $('#handle').setAttribute('cx', (rm * Math.sin(a)).toFixed(2));
+    $('#handle').setAttribute('cy', (-rm * Math.cos(a)).toFixed(2));
+    $('#bStart').textContent = timer.status === 'running' ? '일시정지' : timer.status === 'done' ? '끄기' : '시작';
+
+    var dayKey = d.getFullYear() + '-' + d.getMonth() + '-' + d.getDate();
+    if (dayKey !== lastDay) { lastDay = dayKey; renderDate(d); }
+  }
+
+  function renderDate(d) {
+    $('#dYear').textContent = d.getFullYear();
+    $('#dDate').textContent = (d.getMonth() + 1) + '월 ' + d.getDate() + '일';
+    $('#dDow').textContent = DOW[d.getDay()];
+    $('#dDow').className = 'dow' + (d.getDay() === 0 ? ' sun' : d.getDay() === 6 ? ' sat' : '');
+    var html = '', heads = ['일', '월', '화', '수', '목', '금', '토'];
+    for (var i = 0; i < 7; i++) html += '<span class="h' + (i === 0 ? ' sun' : i === 6 ? ' sat' : '') + '">' + heads[i] + '</span>';
+    var first = new Date(d.getFullYear(), d.getMonth(), 1).getDay();
+    var days = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+    for (i = 0; i < first; i++) html += '<span class="blank">.</span>';
+    for (var day = 1; day <= days; day++) {
+      var w = (first + day - 1) % 7, cls = [];
+      if (w === 0) cls.push('sun'); if (w === 6) cls.push('sat');
+      if (day === d.getDate()) cls.push('today'); else if (day < d.getDate()) cls.push('past');
+      html += '<span class="' + cls.join(' ') + '">' + day + '</span>';
+    }
+    $('#cal').innerHTML = html;
+  }
+
+  // 다음 초가 바뀌는 순간(시계 또는 타이머 중 먼저 오는 쪽)에 맞춰 다시 그림
+  var tickT = null;
+  function schedule() {
+    clearTimeout(tickT);
+    var now = Date.now(), next = 1000 - (now % 1000);
+    if (timer.status === 'running') { var r = (timer.endAt - now) % 1000; if (r > 0) next = Math.min(next, r); }
+    tickT = setTimeout(function () { render(); schedule(); }, next + 2);
+  }
+
+  /* ---------- 링 끌기 ---------- */
+  var ring = $('#ring'), drag = null;
+  function svgPoint(e) {
+    var m = ring.getScreenCTM(); if (!m) return { x: 0, y: 0 };
+    var p = ring.createSVGPoint(); p.x = e.clientX; p.y = e.clientY;
+    return p.matrixTransform(m.inverse());
+  }
+  function minutesAt(p) {
+    var a = Math.atan2(p.x, -p.y) * 180 / Math.PI;      // 맨 위 0도, 시계 방향
+    return Math.round(((a + 360) % 360) / 6);
+  }
+  ring.addEventListener('pointerdown', function (e) {
+    var p = svgPoint(e), dist = Math.sqrt(p.x * p.x + p.y * p.y);
+    if (dist > 58) {
+      drag = { last: Math.round(remaining(Date.now()) / 60000) };
+      ring.setPointerCapture(e.pointerId);
+      onDrag(e);
+    } else drag = 'center';
+  });
+  function onDrag(e) {
+    if (!drag || drag === 'center') return;
+    var m = minutesAt(svgPoint(e));
+    if (drag.last >= 45 && m <= 15) m = 60;              // 맨 위를 넘어가도 60에서 멈춤
+    else if (drag.last <= 15 && m >= 45) m = 0;          // 반대로 넘어가도 0에서 멈춤
+    drag.last = m;
+    setMinutes(m);
+  }
+  ring.addEventListener('pointermove', onDrag);
+  ring.addEventListener('pointerup', function (e) {
+    if (drag === 'center') { var p = svgPoint(e); if (Math.sqrt(p.x * p.x + p.y * p.y) <= 58) toggle(); }
+    drag = null;
+  });
+  ring.addEventListener('pointercancel', function () { drag = null; });
+
+  $('#bStart').addEventListener('click', toggle);
+  $('#bReset').addEventListener('click', reset);
+  Array.prototype.forEach.call(document.querySelectorAll('[data-min]'), function (b) {
+    b.addEventListener('click', function () { setMinutes(+b.getAttribute('data-min')); });
+  });
+  // 브라우저는 사용자가 화면을 한 번 눌러야 소리를 허락하므로, 누를 때마다 소리 장치를 깨워 둔다
+  document.addEventListener('pointerdown', function () { ensureAudio(); keepAwake(); }, true);
+
+  /* ---------- 날씨 (Open-Meteo, 키 필요 없음) ---------- */
+  var WMO = { 0: '맑음', 1: '대체로 맑음', 2: '구름 조금', 3: '흐림', 45: '안개', 48: '안개', 51: '약한 이슬비', 53: '이슬비', 55: '강한 이슬비',
+    56: '어는 이슬비', 57: '어는 이슬비', 61: '약한 비', 63: '비', 65: '강한 비', 66: '어는 비', 67: '어는 비', 71: '약한 눈', 73: '눈', 75: '강한 눈',
+    77: '싸락눈', 80: '약한 소나기', 81: '소나기', 82: '강한 소나기', 85: '눈 소나기', 86: '강한 눈 소나기', 95: '뇌우', 96: '우박 동반 뇌우', 99: '우박 동반 뇌우' };
+  var weatherT = null;
+  function placeLabel(p) { return p.name + (p.admin1 && p.admin1 !== p.name ? ', ' + p.admin1 : ''); }
+  function renderWeather(w, note) {
+    var el = $('#weather');
+    if (!settings.place) {
+      el.innerHTML = '<div class="w-empty">날씨를 보려면 지역을 고르세요.<button class="btn" type="button" id="bPick">지역 고르기</button></div>';
+      $('#bPick').addEventListener('click', openSettings); return;
+    }
+    if (!w) {
+      el.innerHTML = '<div class="w-empty">' + (note || '날씨를 불러오는 중이에요.') + '</div>'; return;
+    }
+    var c = w.current, dl = w.daily, t = new Date(w.fetchedAt);
+    el.innerHTML =
+      '<div class="w-temp">' + Math.round(c.temperature_2m) + '°</div>' +
+      '<div><div class="w-cond">' + (WMO[c.weather_code] || '알 수 없음') + '</div>' +
+      '<div class="w-place">' + placeLabel(settings.place) + '</div></div>' +
+      '<div class="w-meta"><span>최고 <b>' + Math.round(dl.temperature_2m_max[0]) + '°</b> 최저 <b>' + Math.round(dl.temperature_2m_min[0]) + '°</b></span>' +
+      '<span>체감 <b>' + Math.round(c.apparent_temperature) + '°</b></span>' +
+      '<span>습도 <b>' + c.relative_humidity_2m + '%</b></span>' +
+      (dl.precipitation_probability_max && dl.precipitation_probability_max[0] != null ? '<span>강수확률 <b>' + dl.precipitation_probability_max[0] + '%</b></span>' : '') +
+      '<span>' + pad(t.getHours()) + ':' + pad(t.getMinutes()) + ' 기준' + (note ? ' · ' + note : '') + '</span></div>';
+  }
+  function loadWeather() {
+    clearTimeout(weatherT);
+    weatherT = setTimeout(loadWeather, 15 * 60000);
+    var p = settings.place;
+    if (!p) { renderWeather(null); return; }
+    var cached = store.get('weather', null);
+    if (cached && (cached.lat !== p.latitude || cached.lon !== p.longitude)) cached = null;
+    renderWeather(cached);
+    var url = 'https://api.open-meteo.com/v1/forecast?latitude=' + p.latitude + '&longitude=' + p.longitude +
+      '&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code' +
+      '&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=auto&forecast_days=1';
+    fetch(url).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }).then(function (j) {
+      var w = { current: j.current, daily: j.daily, fetchedAt: Date.now(), lat: p.latitude, lon: p.longitude };
+      store.set('weather', w); renderWeather(w);
+    }).catch(function () {
+      renderWeather(cached, cached ? '새로고침 실패' : '날씨를 불러오지 못했어요. 인터넷 연결을 확인하세요.');
+    });
+  }
+
+  /* ---------- 설정 ---------- */
+  function applyTheme() {
+    if (settings.theme === 'auto') document.documentElement.removeAttribute('data-theme');
+    else document.documentElement.setAttribute('data-theme', settings.theme);
+  }
+  function saveSettings() { store.set('settings', settings); }
+  function openSettings() {
+    $('#placeNow').textContent = settings.place ? '현재: ' + placeLabel(settings.place) : '아직 고르지 않았어요';
+    $(settings.hour12 ? '#h12' : '#h24').checked = true;
+    $({ auto: '#thAuto', light: '#thLight', dark: '#thDark' }[settings.theme] || '#thDark').checked = true;
+    $('#v' + settings.volume).checked = true;
+    $('#placeResults').innerHTML = '';
+    $('#sheetWrap').hidden = false;
+  }
+  function closeSettings() { $('#sheetWrap').hidden = true; }
+  $('#bSettings').addEventListener('click', openSettings);
+  $('#bClose').addEventListener('click', closeSettings);
+  $('#sheetWrap').addEventListener('click', function (e) { if (e.target === this) closeSettings(); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { closeSettings(); if (alarmLoop || !$('#alarm').hidden) reset(); } });
+  Array.prototype.forEach.call(document.querySelectorAll('input[name=hfmt]'), function (r) {
+    r.addEventListener('change', function () { settings.hour12 = r.value === '12'; saveSettings(); render(); });
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('input[name=theme]'), function (r) {
+    r.addEventListener('change', function () { settings.theme = r.value; saveSettings(); applyTheme(); });
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('input[name=vol]'), function (r) {
+    r.addEventListener('change', function () { settings.volume = +r.value; saveSettings(); ensureAudio(); beep(); });
+  });
+  $('#bTest').addEventListener('click', function () { ensureAudio(); beep(settings.volume || 3); });
+  $('#placeForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var q = $('#placeQ').value.trim(), box = $('#placeResults');
+    if (!q) return;
+    box.innerHTML = '<small>찾는 중…</small>';
+    // 한글 지명은 "서울"보다 "서울특별시"로 등록된 경우가 많아서 행정구역 이름을 붙여 함께 찾는다
+    var qs = [q];
+    if (/[가-힣]$/.test(q) && !/[시군구도읍면동]$/.test(q)) qs.push(q + '시', q + '특별시', q + '광역시');
+    Promise.all(qs.map(function (s) {
+      return fetch('https://geocoding-api.open-meteo.com/v1/search?count=6&language=ko&name=' + encodeURIComponent(s))
+        .then(function (r) { return r.json(); });
+    }))
+      .then(function (all) {
+        var seen = {}, list = [];
+        all.forEach(function (j) { (j.results || []).forEach(function (p) { if (!seen[p.id]) { seen[p.id] = 1; list.push(p); } }); });
+        list.sort(function (a, b) { return (b.population || 0) - (a.population || 0); });
+        list = list.slice(0, 6);
+        if (!list.length) { box.innerHTML = '<small>"' + q.replace(/</g, '&lt;') + '"에 맞는 지역이 없어요. 다른 이름이나 영어로 찾아보세요.</small>'; return; }
+        box.innerHTML = '';
+        list.forEach(function (p) {
+          var b = document.createElement('button');
+          b.type = 'button';
+          b.textContent = placeLabel(p) + (p.admin2 && p.admin2 !== p.name ? ' ' + p.admin2 : '') + (p.country ? ' · ' + p.country : '');
+          b.addEventListener('click', function () {
+            settings.place = { name: p.name, admin1: p.admin1 || '', country: p.country || '', latitude: p.latitude, longitude: p.longitude };
+            saveSettings(); store.set('weather', null);
+            $('#placeNow').textContent = '현재: ' + placeLabel(settings.place);
+            box.innerHTML = ''; loadWeather();
+          });
+          box.appendChild(b);
+        });
+      })
+      .catch(function () { box.innerHTML = '<small>검색하지 못했어요. 인터넷 연결을 확인하세요.</small>'; });
+  });
+
+  /* ---------- 전체 화면, 화면 꺼짐 방지 ---------- */
+  $('#bFull').addEventListener('click', function () {
+    try {
+      if (document.fullscreenElement) document.exitFullscreen();
+      else document.documentElement.requestFullscreen().catch(function () {});
+    } catch (e) {}
+  });
+  var wakeLock = null;
+  function keepAwake() {
+    if (wakeLock || !('wakeLock' in navigator) || document.visibilityState !== 'visible') return;
+    navigator.wakeLock.request('screen').then(function (l) {
+      wakeLock = l; l.addEventListener('release', function () { wakeLock = null; });
+    }).catch(function () {});
+  }
+  document.addEventListener('visibilitychange', function () { keepAwake(); render(); schedule(); });
+
+  applyTheme(); render(); schedule(); loadWeather(); keepAwake();
+})();
+</script>
