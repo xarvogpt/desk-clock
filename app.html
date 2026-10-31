@@ -51,10 +51,10 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
 .ring .seg.on { fill: var(--accent); }
 .ring .tick { fill: var(--muted); font-family: var(--f-digit); font-size: 6.5px; }
 .ring .handle { fill: var(--fg); }
-.ring .now { fill: var(--fg); font-family: var(--f-digit); font-size: 30px; font-weight: 300; letter-spacing: -1px; font-feature-settings: "tnum"; }
+.ring .now { fill: var(--fg); font-family: var(--f-digit); font-size: 30px; font-weight: 700; letter-spacing: -1px; font-feature-settings: "tnum"; }
 .ring .now .sec { fill: var(--muted); }
 .ring .ampm { fill: var(--muted); font-size: 7px; letter-spacing: 1px; }
-.ring .timer { fill: var(--accent); font-family: var(--f-digit); font-size: 15px; font-weight: 500; font-feature-settings: "tnum"; }
+.ring .timer { fill: var(--accent); font-family: var(--f-digit); font-size: 15px; font-weight: 700; font-feature-settings: "tnum"; }
 .ring .hint { fill: var(--muted); font-size: 5.5px; }
 
 .controls { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
@@ -92,13 +92,11 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
 .w-meta b { color: var(--fg); font-weight: 400; font-family: var(--f-digit); }
 .w-empty { grid-column: 1 / -1; color: var(--muted); font-size: clamp(14px, 2.1vh, 18px); display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 
-/* 타이머 끝 알림 화면 */
-.alarm { position: fixed; inset: 0; z-index: 30; background: var(--accent); color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3vh; text-align: center; cursor: pointer;
-  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); animation: alarm 1s steps(1) infinite; }
-.alarm-title { font-size: clamp(48px, 14vh, 140px); font-weight: 500; letter-spacing: -.02em; }
-.alarm-sub { font-size: clamp(16px, 3vh, 28px); opacity: .85; }
-.alarm-btn { margin-top: 2vh; font-size: clamp(18px, 3.4vh, 30px); padding: .6em 2.2em; border-radius: 999px; border: 2px solid #fff; background: transparent; color: #fff; cursor: pointer; }
-@keyframes alarm { 50% { background: #000; } }
+/* 타이머 끝: 링과 가운데 시각만 깜빡임 */
+body.ringing .ring .seg { animation: ring-blink 1s steps(1) infinite; }
+body.ringing .ring .now, body.ringing .ring .timer { animation: text-blink 1s steps(1) infinite; }
+@keyframes ring-blink { 0% { fill: var(--accent); } 50% { fill: var(--ring-off); } }
+@keyframes text-blink { 50% { opacity: .2; } }
 
 /* 설정 창 */
 .sheet-wrap { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: grid; place-items: center; padding: 16px; z-index: 20; }
@@ -126,7 +124,10 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
   .side { border-left: 0; border-top: 1px solid var(--line); padding: 24px 0 0; }
   .weather { margin-top: 0; }
 }
-@media (prefers-reduced-motion: reduce) { .alarm { animation: none; } }
+@media (prefers-reduced-motion: reduce) {
+  body.ringing .ring .seg { animation: none; fill: var(--accent); }
+  body.ringing .ring .now, body.ringing .ring .timer { animation: none; }
+}
 </style>
 
 <div class="app">
@@ -171,12 +172,6 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
 
     <div class="weather" id="weather"></div>
   </section>
-</div>
-
-<div class="alarm" id="alarm" hidden role="alertdialog" aria-labelledby="alarmTitle">
-  <div class="alarm-title" id="alarmTitle">타이머 끝</div>
-  <div class="alarm-sub" id="alarmSub"></div>
-  <button class="alarm-btn" type="button">끄기</button>
 </div>
 
 <div class="sheet-wrap" id="sheetWrap" hidden>
@@ -292,9 +287,8 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
   }
   function reset() { stopAlarm(); timer = { status: 'idle', endAt: 0, remainingMs: 0, setMs: 0 }; save(); render(); schedule(); }
   function finish() {
-    var setMin = Math.round((timer.setMs || 0) / 60000);
     timer = { status: 'done', endAt: 0, remainingMs: 0, setMs: 0 }; save();
-    startAlarm(setMin);
+    startAlarm();
   }
 
   /* ---------- 알림 소리 ---------- */
@@ -321,19 +315,27 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
     }
     try { if (navigator.vibrate) navigator.vibrate([300, 100, 300]); } catch (e) {}
   }
-  function startAlarm(setMin) {
-    var d = new Date();
-    $('#alarmSub').textContent = (setMin ? setMin + '분 타이머 · ' : '') + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ' 종료 · 화면을 누르면 꺼져요';
-    $('#alarm').hidden = false;
+  function startAlarm() {
+    document.body.classList.add('ringing');
     ensureAudio(); beep(); alarmLoop = setInterval(beep, 1000);
     alarmStop = setTimeout(function () { clearInterval(alarmLoop); alarmLoop = null; }, 180000);
   }
   function stopAlarm() {
-    $('#alarm').hidden = true;
+    document.body.classList.remove('ringing');
     clearInterval(alarmLoop); clearTimeout(alarmStop); alarmLoop = alarmStop = null;
     try { if (navigator.vibrate) navigator.vibrate(0); } catch (e) {}
   }
-  $('#alarm').addEventListener('click', function () { reset(); });
+  // 알림이 울리는 중에는 화면 어디를 눌러도 끄기만 하고, 그 누름은 버튼에 전달하지 않는다
+  var swallowUntil = 0;
+  document.addEventListener('pointerdown', function (e) {
+    if (timer.status !== 'done') return;
+    e.stopPropagation(); e.preventDefault(); swallowUntil = Date.now() + 800; reset();
+  }, true);
+  ['pointerup', 'click'].forEach(function (type) {
+    document.addEventListener(type, function (e) {
+      if (Date.now() < swallowUntil) { e.stopPropagation(); e.preventDefault(); }
+    }, true);
+  });
 
   /* ---------- 화면 그리기 ---------- */
   var lastDay = '';
@@ -352,7 +354,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
     $('#tHint').textContent =
       timer.status === 'running' ? '가운데를 눌러 일시정지' :
       timer.status === 'paused' ? '가운데를 눌러 시작' :
-      timer.status === 'done' ? '눌러서 끄기' : '링을 끌어 시간 설정';
+      timer.status === 'done' ? '화면을 누르면 꺼져요' : '링을 끌어 시간 설정';
     for (var k = 0; k < 60; k++) segEls[k].classList.toggle('on', k < mins);
     var a = (rem / 60000) * 6 * Math.PI / 180, rm = (R1 + R2) / 2;
     $('#handle').setAttribute('cx', (rm * Math.sin(a)).toFixed(2));
@@ -496,7 +498,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
   $('#bSettings').addEventListener('click', openSettings);
   $('#bClose').addEventListener('click', closeSettings);
   $('#sheetWrap').addEventListener('click', function (e) { if (e.target === this) closeSettings(); });
-  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { closeSettings(); if (alarmLoop || !$('#alarm').hidden) reset(); } });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { closeSettings(); if (timer.status === 'done') reset(); } });
   Array.prototype.forEach.call(document.querySelectorAll('input[name=hfmt]'), function (r) {
     r.addEventListener('change', function () { settings.hour12 = r.value === '12'; saveSettings(); render(); });
   });
