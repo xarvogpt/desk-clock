@@ -75,6 +75,14 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
 .ring { width: min(100%, 78vh); max-width: 100%; aspect-ratio: 1; touch-action: none; user-select: none; -webkit-user-select: none; cursor: pointer; }
 .ring .seg { fill: var(--ring-off); }
 .ring .seg.on { fill: var(--accent); }
+.ring .seg { transform-box: fill-box; transform-origin: center; }
+.ring .seg.fold { animation: fold .65s cubic-bezier(.5, 0, .3, 1); }
+@keyframes fold {
+  0%   { fill: var(--accent); transform: scale(1); }
+  45%  { fill: var(--accent); transform: scale(.35) rotate(-25deg); }
+  70%  { fill: var(--ring-off); transform: scale(.35) rotate(-25deg); }
+  100% { fill: var(--ring-off); transform: scale(1); }
+}
 .ring .tick { fill: var(--muted); font-family: var(--f-digit); font-size: 6.5px; }
 .ring .now { fill: var(--fg); font-family: var(--f-digit); font-size: 27px; font-weight: 800; letter-spacing: -1px; font-feature-settings: "tnum"; }
 .ring .now .sec { fill: var(--muted); }
@@ -161,6 +169,7 @@ body.ringing .ring .now, body.ringing .ring .timer { animation: text-blink 1s st
   .weather { margin-top: 0; }
 }
 @media (prefers-reduced-motion: reduce) {
+  .ring .seg.fold { animation: none; }
   body.ringing .ring .seg { animation: none; fill: var(--accent); }
   body.ringing .ring .now, body.ringing .ring .timer { animation: none; }
 }
@@ -350,6 +359,27 @@ body.ringing .ring .now, body.ringing .ring .timer { animation: text-blink 1s st
     }
     try { if (navigator.vibrate) navigator.vibrate([300, 100, 300]); } catch (e) {}
   }
+  // 다이얼 딸깍: 링을 끌다가 1분 칸을 넘을 때마다 아주 짧은 잡음 + 높은 음을 겹쳐 기계식 다이얼처럼 들리게 한다
+  var clickNoise = null;
+  function dialClick() {
+    if (!settings.volume || !audio) return;
+    try {
+      if (!clickNoise) {
+        clickNoise = audio.createBuffer(1, Math.round(audio.sampleRate * 0.015), audio.sampleRate);
+        var ch = clickNoise.getChannelData(0);
+        for (var i = 0; i < ch.length; i++) ch[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / ch.length, 3);
+      }
+      var t = audio.currentTime, vol = [0, 0.25, 0.45, 0.7][settings.volume];
+      var n = audio.createBufferSource(), f = audio.createBiquadFilter(), g = audio.createGain();
+      n.buffer = clickNoise; f.type = 'bandpass'; f.frequency.value = 3200; f.Q.value = 1.2; g.gain.value = vol;
+      n.connect(f); f.connect(g); g.connect(audio.destination); n.start(t);
+      var o = audio.createOscillator(), og = audio.createGain();
+      o.frequency.value = 2400; o.connect(og); og.connect(audio.destination);
+      og.gain.setValueAtTime(vol * 0.25, t); og.gain.exponentialRampToValueAtTime(0.0001, t + 0.012);
+      o.start(t); o.stop(t + 0.015);
+      if (navigator.vibrate) navigator.vibrate(6);
+    } catch (e) {}
+  }
   function startAlarm() {
     document.body.classList.add('ringing');
     ensureAudio(); beep(); alarmLoop = setInterval(beep, 1000);
@@ -373,7 +403,12 @@ body.ringing .ring .now, body.ringing .ring .timer { animation: text-blink 1s st
   });
 
   /* ---------- 화면 그리기 ---------- */
-  var lastDay = '';
+  var lastDay = '', prevMins = null;
+  function foldSeg(el) {
+    el.classList.remove('fold'); void el.getBoundingClientRect();   // 같은 칸에 다시 걸 수 있게 초기화
+    el.classList.add('fold');
+    setTimeout(function () { el.classList.remove('fold'); }, 700);
+  }
   function render() {
     var now = Date.now(), d = new Date(now);
     if (timer.status === 'running' && now >= timer.endAt) finish();
@@ -386,6 +421,11 @@ body.ringing .ring .now, body.ringing .ring .timer { animation: text-blink 1s st
 
     var rem = remaining(now), secs = Math.ceil(rem / 1000), mins = Math.ceil(rem / 60000);
     $('#tTimer').textContent = timer.status === 'done' ? '끝' : pad(Math.floor(secs / 60)) + ':' + pad(secs % 60);
+    // 타이머가 흘러서 1분이 줄면, 꺼지는 칸이 짧게 접혔다가 꺼진다 (손으로 돌릴 때는 바로 바뀜)
+    if (timer.status === 'running' && !drag && prevMins !== null && mins < prevMins) {
+      for (var j = mins; j < prevMins && j < 60; j++) foldSeg(segEls[j]);
+    }
+    prevMins = mins;
     for (var k = 0; k < 60; k++) segEls[k].classList.toggle('on', k < mins);
     $('#bStart').textContent = timer.status === 'running' ? '일시정지' : timer.status === 'done' ? '끄기' : '시작';
 
@@ -445,6 +485,7 @@ body.ringing .ring .now, body.ringing .ring .timer { animation: text-blink 1s st
     var m = minutesAt(svgPoint(e));
     if (drag.last >= 45 && m <= 15) m = 60;              // 맨 위를 넘어가도 60에서 멈춤
     else if (drag.last <= 15 && m >= 45) m = 0;          // 반대로 넘어가도 0에서 멈춤
+    if (m !== drag.last) dialClick();
     drag.last = m;
     setMinutes(m);
   }
