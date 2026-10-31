@@ -3,6 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#000000">
+<link rel="apple-touch-icon" href="icon-192.png">
+<script>if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(function () {});</script>
 <title>책상 시계</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
@@ -72,7 +76,6 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
 .ring .seg { fill: var(--ring-off); }
 .ring .seg.on { fill: var(--accent); }
 .ring .tick { fill: var(--muted); font-family: var(--f-digit); font-size: 6.5px; }
-.ring .handle { fill: var(--fg); }
 .ring .now { fill: var(--fg); font-family: var(--f-digit); font-size: 27px; font-weight: 800; letter-spacing: -1px; font-feature-settings: "tnum"; }
 .ring .now .sec { fill: var(--muted); }
 .ring .ampm { fill: var(--muted); font-size: 7px; letter-spacing: 1px; }
@@ -170,7 +173,6 @@ body.ringing .ring .now, body.ringing .ring .timer { animation: text-blink 1s st
     <svg class="ring" id="ring" viewBox="-111 -111 222 222" aria-label="60분 타이머. 링을 끌어서 시간을 정하고 가운데를 눌러 시작">
       <g id="segs"></g>
       <g id="ticks"></g>
-      <circle id="handle" class="handle" r="6" cx="0" cy="-78"></circle>
       <text id="tAmpm" class="ampm" x="0" y="-22" text-anchor="middle"></text>
       <text class="now" x="0" y="4" text-anchor="middle"><tspan id="tHM">--:--</tspan><tspan id="tSec" class="sec">:--</tspan></text>
       <text id="tTimer" class="timer" x="0" y="29" text-anchor="middle">00:00</text>
@@ -385,9 +387,6 @@ body.ringing .ring .now, body.ringing .ring .timer { animation: text-blink 1s st
     var rem = remaining(now), secs = Math.ceil(rem / 1000), mins = Math.ceil(rem / 60000);
     $('#tTimer').textContent = timer.status === 'done' ? '끝' : pad(Math.floor(secs / 60)) + ':' + pad(secs % 60);
     for (var k = 0; k < 60; k++) segEls[k].classList.toggle('on', k < mins);
-    var a = (rem / 60000) * 6 * Math.PI / 180, rm = (R1 + R2) / 2;
-    $('#handle').setAttribute('cx', (rm * Math.sin(a)).toFixed(2));
-    $('#handle').setAttribute('cy', (-rm * Math.cos(a)).toFixed(2));
     $('#bStart').textContent = timer.status === 'running' ? '일시정지' : timer.status === 'done' ? '끄기' : '시작';
 
     var dayKey = d.getFullYear() + '-' + d.getMonth() + '-' + d.getDate();
@@ -610,12 +609,21 @@ body.ringing .ring .now, body.ringing .ring .timer { animation: text-blink 1s st
   });
 
   /* ---------- 전체 화면, 화면 꺼짐 방지 ---------- */
+  // 홈 화면 앱으로 열었으면 이미 전체 화면이라 버튼이 필요 없다
+  var asApp = false;
+  try { asApp = matchMedia('(display-mode: fullscreen)').matches || matchMedia('(display-mode: standalone)').matches; } catch (e) {}
+  if (asApp) $('#bFull').hidden = true;
+  function enterFull() {
+    try { if (!document.fullscreenElement && document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(function () {}); } catch (e) {}
+  }
   $('#bFull').addEventListener('click', function () {
-    try {
-      if (document.fullscreenElement) document.exitFullscreen();
-      else document.documentElement.requestFullscreen().catch(function () {});
-    } catch (e) {}
+    if (document.fullscreenElement) { settings.full = false; try { document.exitFullscreen(); } catch (e) {} }
+    else { settings.full = true; enterFull(); }
+    saveSettings();
   });
+  // 전체 화면을 켜 둔 상태에서 뒤로가기·화면 꺼짐 등으로 풀리면, 다음에 화면을 누를 때 다시 전체 화면으로 돌아간다
+  // (브라우저는 사용자가 누르지 않으면 전체 화면을 못 켜게 막는다)
+  document.addEventListener('pointerup', function () { if (settings.full && !asApp) enterFull(); }, true);
   var wakeLock = null;
   function keepAwake() {
     if (wakeLock || !('wakeLock' in navigator) || document.visibilityState !== 'visible') return;
