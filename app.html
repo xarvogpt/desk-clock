@@ -1,8 +1,6 @@
 <title>책상 시계</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Azeret+Mono:wght@300;400;500&family=IBM+Plex+Sans+KR:wght@300;400;500&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <style>
 /* 레이아웃: 검은 화면을 세로 실선 하나로 나눔. 왼쪽은 60분 링 타이머 + 시각, 오른쪽은 날짜·달력·날씨. 세로 화면이면 위아래로 쌓음 */
 :root {
@@ -15,8 +13,8 @@
   --accent: #ff5631;
   --sun: #ff705a;
   --sat: #7aa2ff;
-  --f-digit: "Azeret Mono", ui-monospace, Menlo, Consolas, monospace;
-  --f-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --f-digit: "Pretendard Variable", Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --f-body: "Pretendard Variable", Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
   color-scheme: dark;
 }
 @media (prefers-color-scheme: light) {
@@ -34,6 +32,7 @@
 html, body { height: 100%; }
 body {
   background: var(--bg); color: var(--fg); font-family: var(--f-body); font-weight: 300;
+  font-variant-numeric: tabular-nums;   /* 숫자 폭을 같게 해서 초가 바뀔 때 글자가 흔들리지 않게 */
   box-sizing: border-box; overflow: hidden;
   padding-block: 20px;
   padding-left: max(16px, env(safe-area-inset-left, 0px));
@@ -52,10 +51,10 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
 .ring .seg.on { fill: var(--accent); }
 .ring .tick { fill: var(--muted); font-family: var(--f-digit); font-size: 6.5px; }
 .ring .handle { fill: var(--fg); }
-.ring .now { fill: var(--fg); font-family: var(--f-digit); font-size: 24px; font-weight: 300; letter-spacing: -.5px; }
+.ring .now { fill: var(--fg); font-family: var(--f-digit); font-size: 30px; font-weight: 300; letter-spacing: -1px; font-feature-settings: "tnum"; }
 .ring .now .sec { fill: var(--muted); }
 .ring .ampm { fill: var(--muted); font-size: 7px; letter-spacing: 1px; }
-.ring .timer { fill: var(--accent); font-family: var(--f-digit); font-size: 13px; font-weight: 400; }
+.ring .timer { fill: var(--accent); font-family: var(--f-digit); font-size: 15px; font-weight: 500; font-feature-settings: "tnum"; }
 .ring .hint { fill: var(--muted); font-size: 5.5px; }
 
 .controls { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }

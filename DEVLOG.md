@@ -1,5 +1,11 @@
 # 개발 기록 (책상 시계)
 
+## 2026-11-01 (글꼴 교체)
+- **한 일:** 글꼴을 Azeret Mono(숫자) + IBM Plex Sans KR(글자)에서 **프리텐다드(Pretendard)** 하나로 바꿨다. 가운데 시각을 조금 키웠다(24 → 30).
+- **문제:** 프리텐다드는 숫자마다 폭이 달라서(1이 0보다 좁음) 초가 바뀔 때 시각 글자가 좌우로 흔들릴 수 있다.
+- **해결:** 숫자 폭을 같게 맞추는 설정(tabular-nums, tnum)을 켰다.
+- **참고:** 프리텐다드는 Google Fonts에 없어서 jsDelivr(파일 배포 서버)에서 불러온다. Claude 미리보기 화면은 Google Fonts 외의 글꼴을 막기 때문에 미리보기에서는 기본 글꼴로 보인다. 공개 주소에서는 정상으로 보인다.
+
 ## 2026-11-01 (공개 주소)
 - **한 일:** GitHub 공개 저장소 `xarvogpt/desk-clock`에 올리고 GitHub Pages를 켰다. 공개 주소: https://xarvogpt.github.io/desk-clock/
 - **문제:**
