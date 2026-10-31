@@ -5,6 +5,8 @@ cd "$(dirname "$0")"
   printf '<!doctype html>\n<html lang="ko">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n'
   # 홈 화면에 앱으로 설치하면 주소창 없이 전체 화면으로 열리게 하는 설정
   printf '<link rel="manifest" href="manifest.webmanifest">\n<meta name="theme-color" content="#000000">\n<link rel="apple-touch-icon" href="icon-192.png">\n'
+  # 아이패드·아이폰: 홈 화면에서 열면 주소창 없이, 위쪽 상태 표시줄은 검은 화면 위에 겹쳐서 표시
+  printf '<meta name="apple-mobile-web-app-capable" content="yes">\n<meta name="mobile-web-app-capable" content="yes">\n<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">\n<meta name="apple-mobile-web-app-title" content="책상 시계">\n'
   printf '<script>if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(function () {});</script>\n'
   sed -n '1,/^<\/style>$/p' app.html
   printf '</head>\n<body>\n'
