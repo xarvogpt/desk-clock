@@ -42,20 +42,20 @@
   --f-body: "Pretendard Variable", Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
   color-scheme: dark;
 }
-/* 밝게: 검은 바탕 위 연회색 카드, 검은 글자, 번트 오렌지 포인트 */
+/* 밝게: 화면 전체 상아색 바탕(카드 없이 검정 테마와 같은 배치), 검은 글자, 번트 오렌지 포인트 */
 @media (prefers-color-scheme: light) {
   :root:not([data-theme="dark"]) {
-    --bg: #000000; --panel: #e4e4e2; --fg: #0e0e0d; --muted: #5d5c59; --line: #bdbcb8;
-    --ring-off: #b8b7b3; --accent: #b2542a; --sun: #b2542a; --sat: #2d4f99; --bar-a: #0e0e0d; --bar-b: #9d9c98;
-    --card: #d9d9d7; --card-solid: #d9d9d7; --card-pad: clamp(16px, 2.6vh, 26px); --app-gap: 14px; --side-pad: 0px; --side-rule: transparent;
-    --w-display: 500; --w-top: 0; --cal-grow: 1; color-scheme: light;
+    --bg: #f3efe4; --panel: #fbf8f0; --fg: #1b1a17; --muted: #7a756b; --line: #dbd4c4;
+    --ring-off: #e2dbcb; --accent: #bf5a2c; --sun: #bf5a2c; --sat: #2f55a0; --bar-a: #1b1a17; --bar-b: #c4bdae;
+    --card: transparent; --card-solid: #f3efe4; --card-pad: 0px; --app-gap: 0px; --side-pad: 3.2vw; --side-rule: var(--line);
+    --w-display: 500; color-scheme: light;
   }
 }
 :root[data-theme="light"] {
-  --bg: #000000; --panel: #e4e4e2; --fg: #0e0e0d; --muted: #5d5c59; --line: #bdbcb8;
-  --ring-off: #b8b7b3; --accent: #b2542a; --sun: #b2542a; --sat: #2d4f99; --bar-a: #0e0e0d; --bar-b: #9d9c98;
-  --card: #d9d9d7; --card-solid: #d9d9d7; --card-pad: clamp(16px, 2.6vh, 26px); --app-gap: 14px; --side-pad: 0px; --side-rule: transparent;
-  --w-display: 500; --w-top: 0; --cal-grow: 1; color-scheme: light;
+  --bg: #f3efe4; --panel: #fbf8f0; --fg: #1b1a17; --muted: #7a756b; --line: #dbd4c4;
+  --ring-off: #e2dbcb; --accent: #bf5a2c; --sun: #bf5a2c; --sat: #2f55a0; --bar-a: #1b1a17; --bar-b: #c4bdae;
+  --card: transparent; --card-solid: #f3efe4; --card-pad: 0px; --app-gap: 0px; --side-pad: 3.2vw; --side-rule: var(--line);
+  --w-display: 500; color-scheme: light;
 }
 
 [hidden] { display: none !important; }
