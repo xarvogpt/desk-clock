@@ -553,7 +553,7 @@ body.ringing .ring .now, body.ringing .ring .timer { animation: text-blink 1s st
       '<div class="w-lh"><span>최저 <b>' + lo + '°</b></span><span>최고 <b>' + hi + '°</b></span></div></div></div>' +
       '<div class="w-meta"><span>체감 <b>' + Math.round(c.apparent_temperature) + '°</b></span>' +
       '<span>습도 <b>' + c.relative_humidity_2m + '%</b></span>' +
-      (dl.precipitation_probability_max && dl.precipitation_probability_max[0] != null ? '<span>강수확률 <b>' + dl.precipitation_probability_max[0] + '%</b></span>' : '') + '</div>';
+      (w.rain3h != null ? '<span>3시간 내 강수확률 <b>' + w.rain3h + '%</b></span>' : '') + '</div>';
   }
   function loadWeather() {
     clearTimeout(weatherT);
@@ -565,9 +565,12 @@ body.ringing .ring .now, body.ringing .ring .timer { animation: text-blink 1s st
     renderWeather(cached);
     var url = 'https://api.open-meteo.com/v1/forecast?latitude=' + p.latitude + '&longitude=' + p.longitude +
       '&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,is_day' +
-      '&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=auto&forecast_days=1';
+      '&daily=temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=1' +
+      // 강수확률은 "오늘 최대값"이 아니라 지금 시각부터 4개 시간 칸(약 3시간)만 받는다. 지난 새벽 값이 하루 종일 남는 문제 때문
+      '&hourly=precipitation_probability&forecast_hours=4';
     fetch(url).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }).then(function (j) {
-      var w = { current: j.current, daily: j.daily, fetchedAt: Date.now(), lat: p.latitude, lon: p.longitude };
+      var pp = (j.hourly && j.hourly.precipitation_probability || []).filter(function (v) { return v != null; });
+      var w = { current: j.current, daily: j.daily, rain3h: pp.length ? Math.max.apply(null, pp) : null, fetchedAt: Date.now(), lat: p.latitude, lon: p.longitude };
       store.set('weather', w); renderWeather(w);
     }).catch(function () {
       renderWeather(cached, cached ? '새로고침 실패' : '날씨를 불러오지 못했어요. 인터넷 연결을 확인하세요.');
