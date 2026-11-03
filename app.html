@@ -91,7 +91,8 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
 /* 날짜: 일력처럼 큰 "일" 숫자 + 월·요일, 아래에 올해 지나간 비율 막대 */
 .side-top { display: flex; flex-direction: column; }
 .w-card { position: relative; }
-.w-card .icons { position: absolute; top: calc(var(--card-pad) - 12px); right: calc(var(--card-pad) - 10px); }
+/* 버튼 둘레의 투명한 누름 영역만큼 바깥으로 당기되, 카드 여백이 0인 테마에서 패널 밖으로 나가 잘리지 않게 0 아래로는 안 내려감 */
+.w-card .icons { position: absolute; top: max(0px, calc(var(--card-pad) - 12px)); right: max(0px, calc(var(--card-pad) - 10px)); }
 .day-block { display: flex; align-items: center; gap: clamp(10px, 1.6vw, 20px); }
 .yr-big { margin-left: auto; align-self: flex-end; text-align: right; }
 .yr-pct { font-size: clamp(30px, 6.4vh, 58px); font-weight: 800; line-height: 1; letter-spacing: -.02em; font-feature-settings: "tnum"; }
