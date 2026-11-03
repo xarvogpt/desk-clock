@@ -30,6 +30,7 @@
   --bar-b: #6e6a64;
   /* 카드: 검정 테마에서는 안 보이게(투명, 여백 0), 밝게 테마에서는 회색 카드 */
   --card: transparent;
+  --card-solid: #000000;   /* 카드 실제 바탕색(투명이면 화면 바탕색). 진행선 위 점 테두리에 씀 */
   --card-pad: 0px;
   --app-gap: 0px;
   --side-pad: 3.2vw;
@@ -46,14 +47,14 @@
   :root:not([data-theme="dark"]) {
     --bg: #000000; --panel: #e4e4e2; --fg: #0e0e0d; --muted: #5d5c59; --line: #bdbcb8;
     --ring-off: #b8b7b3; --accent: #b2542a; --sun: #b2542a; --sat: #2d4f99; --bar-a: #0e0e0d; --bar-b: #9d9c98;
-    --card: #d9d9d7; --card-pad: clamp(16px, 2.6vh, 26px); --app-gap: 14px; --side-pad: 0px; --side-rule: transparent;
+    --card: #d9d9d7; --card-solid: #d9d9d7; --card-pad: clamp(16px, 2.6vh, 26px); --app-gap: 14px; --side-pad: 0px; --side-rule: transparent;
     --w-display: 500; --w-top: 0; --cal-grow: 1; color-scheme: light;
   }
 }
 :root[data-theme="light"] {
   --bg: #000000; --panel: #e4e4e2; --fg: #0e0e0d; --muted: #5d5c59; --line: #bdbcb8;
   --ring-off: #b8b7b3; --accent: #b2542a; --sun: #b2542a; --sat: #2d4f99; --bar-a: #0e0e0d; --bar-b: #9d9c98;
-  --card: #d9d9d7; --card-pad: clamp(16px, 2.6vh, 26px); --app-gap: 14px; --side-pad: 0px; --side-rule: transparent;
+  --card: #d9d9d7; --card-solid: #d9d9d7; --card-pad: clamp(16px, 2.6vh, 26px); --app-gap: 14px; --side-pad: 0px; --side-rule: transparent;
   --w-display: 500; --w-top: 0; --cal-grow: 1; color-scheme: light;
 }
 
@@ -101,19 +102,25 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
 /* 오른쪽: 날짜·달력·날씨 */
 .side { min-height: 0; min-width: 0; border-left: 1px solid var(--side-rule); padding: 0 0 0 var(--side-pad); display: flex; flex-direction: column; gap: max(var(--app-gap), 3.2vh * (1 - var(--cal-grow))); overflow: hidden; }
 /* 날짜: 일력처럼 큰 "일" 숫자 + 월·요일, 아래에 올해 지나간 비율 막대 */
-.side-top { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 0 12px; }
+.side-top { display: flex; flex-direction: column; }
+.w-card { position: relative; }
+.w-card .icons { position: absolute; top: calc(var(--card-pad) - 12px); right: calc(var(--card-pad) - 10px); }
 .day-block { display: flex; align-items: center; gap: clamp(10px, 1.6vw, 20px); }
+.yr-big { margin-left: auto; align-self: flex-end; text-align: right; }
+.yr-pct { font-size: clamp(30px, 6.4vh, 58px); font-weight: 800; line-height: 1; letter-spacing: -.02em; font-feature-settings: "tnum"; }
+.yr-left { color: var(--muted); font-size: clamp(12px, 1.9vh, 16px); margin-top: .4vh; }
 .day { font-size: clamp(64px, 14vh, 124px); font-weight: 800; line-height: .85; letter-spacing: -.04em; font-feature-settings: "tnum"; }
 .day-side { display: flex; flex-direction: column; gap: .2em; font-size: clamp(18px, 3.6vh, 32px); line-height: 1.1; }
 .month { font-weight: 700; }
 .dow { font-weight: 500; color: var(--accent); }
 .dow.sun { color: var(--sun); }
 .dow.sat { color: var(--sat); }
-.year-bar { grid-column: 1 / -1; display: flex; gap: 3px; height: clamp(12px, 2.4vh, 22px); margin-top: 2.2vh; }
-.year-bar i { flex: 1; background: var(--ring-off); border-radius: 2px; }
-.year-bar i.on { background: var(--accent); }
-.year-lab { grid-column: 1 / -1; display: flex; justify-content: space-between; color: var(--muted); font-size: clamp(12px, 1.8vh, 15px); margin-top: .6vh; }
-.year-lab b { color: var(--fg); font-weight: 600; }
+/* 올해 진행: 가는 실선 하나 + 오늘 위치 점, 아래에 달 이름 (칸 없이 매끈하게 해서 타이머 링과 겹쳐 보이지 않게) */
+.year-line { position: relative; height: 4px; border-radius: 2px; background: var(--ring-off); margin-top: 3vh; }
+.year-line i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 2px; background: var(--accent); }
+.year-line b { position: absolute; top: 50%; width: 14px; height: 14px; border-radius: 50%; background: var(--accent); transform: translate(-50%, -50%); box-shadow: 0 0 0 4px var(--card-solid); }
+.year-ticks { position: relative; height: 1.4em; margin-top: 1.2vh; color: var(--muted); font-size: clamp(11px, 1.7vh, 14px); }
+.year-ticks span { position: absolute; top: 0; white-space: nowrap; }
 .icons { display: flex; gap: 4px; flex-shrink: 0; }
 .icon-btn { width: 44px; height: 44px; border-radius: 50%; border: 0; background: transparent; display: grid; place-items: center; cursor: pointer; opacity: .6; }
 .icon-btn:hover { opacity: 1; }
@@ -146,6 +153,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
 .w-lh b { color: var(--fg); font-weight: 500; }
 .w-meta { display: flex; flex-wrap: wrap; gap: .3em 1.4em; color: var(--muted); font-size: clamp(12px, 1.9vh, 16px); }
 .w-meta b { color: var(--fg); font-weight: 500; font-family: var(--f-digit); }
+.w-meta .w-time { margin-left: auto; }
 .w-empty { color: var(--muted); font-size: clamp(14px, 2.1vh, 18px); display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 
 /* 멈춰 있는 동안(시간을 맞췄지만 시작 전, 또는 일시정지)은 빨간 칸과 남은 시간이 천천히 숨 쉬듯 흐려졌다 돌아온다. 돌아가는 중에는 가만히 있음 */
@@ -213,16 +221,7 @@ body.ringing .ring .now, body.ringing .ring .timer { animation: text-blink 1s st
   </section>
 
   <section class="side">
-    <div class="weather card" id="weather"></div>
-
-    <div class="side-top card">
-      <div class="day-block">
-        <div class="day" id="dDay"></div>
-        <div class="day-side">
-          <div class="month" id="dMonth"></div>
-          <div class="dow" id="dDow"></div>
-        </div>
-      </div>
+    <div class="card w-card">
       <div class="icons">
         <button class="icon-btn" id="bFull" type="button" aria-label="전체 화면">
           <svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
@@ -231,8 +230,20 @@ body.ringing .ring .now, body.ringing .ring .timer { animation: text-blink 1s st
           <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
         </button>
       </div>
-      <div class="year-bar" id="yBar" aria-hidden="true"></div>
-      <div class="year-lab"><span id="dYear"></span><span>올해 <b id="yPct"></b> 지남</span></div>
+      <div class="weather" id="weather"></div>
+    </div>
+
+    <div class="side-top card">
+      <div class="day-block">
+        <div class="day" id="dDay"></div>
+        <div class="day-side">
+          <div class="month" id="dMonth"></div>
+          <div class="dow" id="dDow"></div>
+        </div>
+        <div class="yr-big"><div class="yr-pct" id="yPct"></div><div class="yr-left" id="yLeft"></div></div>
+      </div>
+      <div class="year-line" aria-hidden="true"><i id="yFill"></i><b id="yDot"></b></div>
+      <div class="year-ticks" id="yTicks" aria-hidden="true"></div>
     </div>
 
     <div class="cal card" id="cal" aria-label="이번 달 달력"></div>
@@ -459,12 +470,18 @@ body.ringing .ring .now, body.ringing .ring .timer { animation: text-blink 1s st
     $('#dDay').textContent = d.getDate();
     $('#dMonth').textContent = (d.getMonth() + 1) + '월';
     $('#dDow').textContent = DOW[d.getDay()];
-    $('#dYear').textContent = d.getFullYear() + '년';
-    var y0 = new Date(d.getFullYear(), 0, 1), y1 = new Date(d.getFullYear() + 1, 0, 1);
-    var pct = Math.floor((d - y0) / (y1 - y0) * 100), on = Math.round(pct / 2), bars = '';
-    for (var b = 0; b < 50; b++) bars += '<i' + (b < on ? ' class="on"' : '') + '></i>';
-    $('#yBar').innerHTML = bars;
+    var yr = d.getFullYear(), y0 = new Date(yr, 0, 1), y1 = new Date(yr + 1, 0, 1), span = y1 - y0;
+    var frac = (d - y0) / span, pct = Math.floor(frac * 100);
+    var daysLeft = Math.round((y1 - new Date(yr, d.getMonth(), d.getDate())) / 864e5) - 1;   // 오늘 다음 날부터 12월 31일까지
     $('#yPct').textContent = pct + '%';
+    $('#yLeft').textContent = daysLeft + '일 남음';
+    $('#yFill').style.width = (frac * 100).toFixed(2) + '%';
+    $('#yDot').style.left = (frac * 100).toFixed(2) + '%';
+    var ticks = '';
+    [0, 3, 6, 9, 11].forEach(function (m) {   // 1월, 4월, 7월, 10월, 12월이 시작하는 위치에 이름을 둔다
+      ticks += '<span style="left:' + ((new Date(yr, m, 1) - y0) / span * 100).toFixed(2) + '%">' + (m + 1) + '월</span>';
+    });
+    $('#yTicks').innerHTML = ticks;
     $('#dDow').className = 'dow' + (d.getDay() === 0 ? ' sun' : d.getDay() === 6 ? ' sat' : '');
     var html = '', heads = ['일', '월', '화', '수', '목', '금', '토'];
     for (var i = 0; i < 7; i++) html += '<span class="h' + (i === 0 ? ' sun' : i === 6 ? ' sat' : '') + '">' + heads[i] + '</span>';
@@ -585,14 +602,15 @@ body.ringing .ring .now, body.ringing .ring .timer { animation: text-blink 1s st
     // 막대 위 주황 칸: 오늘 최저~최고 사이에서 지금 기온의 위치
     var pos = hi > lo ? Math.min(1, Math.max(0, (c.temperature_2m - dl.temperature_2m_min[0]) / (dl.temperature_2m_max[0] - dl.temperature_2m_min[0]))) : 0.5;
     el.innerHTML =
-      '<div class="w-head"><span>' + placeLabel(settings.place) + '</span><span>' + pad(t.getHours()) + ':' + pad(t.getMinutes()) + ' 기준' + (note ? ' · ' + note : '') + '</span></div>' +
+      '<div class="w-head"><span>' + placeLabel(settings.place) + '</span></div>' +
       '<div class="w-main">' + weatherIcon(c.weather_code, c.is_day !== 0) + '<div class="w-temp">' + now + '°</div>' +
       '<div><div class="w-cond">' + (WMO[c.weather_code] || '알 수 없음') + '</div>' +
       '<div class="w-bar"><i style="left:' + (9 + pos * 82).toFixed(1) + '%"></i></div>' +
       '<div class="w-lh"><span>최저 <b>' + lo + '°</b></span><span>최고 <b>' + hi + '°</b></span></div></div></div>' +
       '<div class="w-meta"><span>체감 <b>' + Math.round(c.apparent_temperature) + '°</b></span>' +
       '<span>습도 <b>' + c.relative_humidity_2m + '%</b></span>' +
-      (w.rain3h != null ? '<span>3시간 내 강수확률 <b>' + w.rain3h + '%</b></span>' : '') + '</div>';
+      (w.rain3h != null ? '<span>3시간 내 강수확률 <b>' + w.rain3h + '%</b></span>' : '') +
+      '<span class="w-time">' + pad(t.getHours()) + ':' + pad(t.getMinutes()) + ' 기준' + (note ? ' · ' + note : '') + '</span></div>';
   }
   function loadWeather() {
     clearTimeout(weatherT);
