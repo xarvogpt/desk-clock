@@ -148,6 +148,9 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
 .w-meta b { color: var(--fg); font-weight: 500; font-family: var(--f-digit); }
 .w-empty { color: var(--muted); font-size: clamp(14px, 2.1vh, 18px); display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 
+/* 멈춰 있는 동안(시간을 맞췄지만 시작 전, 또는 일시정지)은 빨간 칸과 남은 시간이 천천히 숨 쉬듯 흐려졌다 돌아온다. 돌아가는 중에는 가만히 있음 */
+body.paused .ring .seg.on, body.paused .ring .timer { animation: breathe 2.4s ease-in-out infinite; }
+@keyframes breathe { 50% { opacity: .3; } }
 /* 타이머 끝: 링과 가운데 시각만 깜빡임 */
 body.ringing .ring .seg { animation: ring-blink 1s steps(1) infinite; }
 body.ringing .ring .now, body.ringing .ring .timer { animation: text-blink 1s steps(1) infinite; }
@@ -182,6 +185,7 @@ body.ringing .ring .now, body.ringing .ring .timer { animation: text-blink 1s st
 }
 @media (prefers-reduced-motion: reduce) {
   .ring .seg.fold { animation: none; }
+  body.paused .ring .seg.on, body.paused .ring .timer { animation: none; opacity: .5; }
   body.ringing .ring .seg { animation: none; fill: var(--accent); }
   body.ringing .ring .now, body.ringing .ring .timer { animation: none; }
 }
@@ -209,6 +213,8 @@ body.ringing .ring .now, body.ringing .ring .timer { animation: text-blink 1s st
   </section>
 
   <section class="side">
+    <div class="weather card" id="weather"></div>
+
     <div class="side-top card">
       <div class="day-block">
         <div class="day" id="dDay"></div>
@@ -230,8 +236,6 @@ body.ringing .ring .now, body.ringing .ring .timer { animation: text-blink 1s st
     </div>
 
     <div class="cal card" id="cal" aria-label="이번 달 달력"></div>
-
-    <div class="weather card" id="weather"></div>
   </section>
 </div>
 
@@ -445,6 +449,7 @@ body.ringing .ring .now, body.ringing .ring .timer { animation: text-blink 1s st
     prevMins = mins;
     for (var k = 0; k < 60; k++) segEls[k].classList.toggle('on', k < mins);
     $('#bStart').textContent = timer.status === 'running' ? '일시정지' : timer.status === 'done' ? '끄기' : '시작';
+    document.body.classList.toggle('paused', timer.status === 'paused' && rem > 0 && !drag);
 
     var dayKey = d.getFullYear() + '-' + d.getMonth() + '-' + d.getDate();
     if (dayKey !== lastDay) { lastDay = dayKey; renderDate(d); }
