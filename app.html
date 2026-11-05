@@ -127,24 +127,25 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
 .cal .blank { visibility: hidden; }
 
 .weather { display: flex; flex-direction: column; gap: 1.4vh; }
-.w-head { display: flex; justify-content: space-between; gap: 12px; color: var(--muted); font-size: clamp(12px, 1.9vh, 16px); font-weight: 400; }
-.w-main { display: grid; grid-template-columns: auto auto minmax(0, 1fr); gap: 0 1.6vw; align-items: center; }
-.w-icon { width: clamp(64px, 15vh, 140px); height: auto; display: block; }
+/* 날씨: 큰 기온 + 상태 한 줄, 아래 8시간 기온 곡선 (날짜 칸의 직선과 같은 가는 선이지만 굽이치는 모양으로 구분) */
+.w-head { color: var(--muted); font-size: clamp(12px, 1.9vh, 16px); font-weight: 400; margin-bottom: 1vh; }
+.w-top { display: flex; align-items: baseline; gap: clamp(8px, 1.2vw, 14px); }
+.w-num { font-size: clamp(48px, 9.5vh, 88px); font-weight: 800; line-height: .9; letter-spacing: -.04em; }
+.w-cond { font-size: clamp(15px, 2.6vh, 22px); font-weight: 600; white-space: nowrap; }
+.w-meta { margin-left: auto; color: var(--muted); font-size: clamp(12px, 1.9vh, 16px); white-space: nowrap; }
+.w-icon { width: 1.15em; height: 1.15em; display: inline-block; vertical-align: -.2em; margin-right: .3em; }
+.w-curve { display: block; width: 100%; height: auto; margin-top: 1.2vh; overflow: visible; }
+.w-curve .sp-line { fill: none; stroke: var(--fg); stroke-width: 1.5; stroke-linejoin: round; }
+.w-curve .sp-dot { fill: var(--fg); }
+.w-curve .sp-now { fill: var(--accent); }
+.w-curve .sp-val { fill: var(--fg); font-size: 14px; text-anchor: middle; font-family: var(--f-digit); }
+.w-curve .sp-hr { fill: var(--muted); font-size: 13px; text-anchor: middle; }
 .w-icon .sun { fill: var(--accent); }
 .w-icon .cloud { fill: var(--fg); }
 .w-icon .cloud.dim { fill: var(--muted); }
 .w-icon .drop { stroke: var(--accent); stroke-width: 5; stroke-linecap: round; fill: none; }
 .w-icon .flake { fill: var(--accent); }
 .w-icon .fog { stroke: var(--muted); stroke-width: 5; stroke-linecap: round; }
-.w-temp { font-family: var(--f-digit); font-weight: var(--w-display); font-size: clamp(40px, 10vh, 92px); line-height: .9; letter-spacing: -.04em; }
-.w-cond { font-size: clamp(16px, 2.6vh, 24px); font-weight: 500; margin-bottom: .7vh; }
-.w-bar { position: relative; height: clamp(14px, 3vh, 30px); border-radius: 6px; background: linear-gradient(90deg, var(--bar-a), var(--bar-b)); }
-.w-bar i { position: absolute; top: 0; bottom: 0; width: 18%; min-width: 22px; border-radius: 6px; background: var(--accent); transform: translateX(-50%); }
-.w-lh { display: flex; justify-content: space-between; color: var(--muted); font-size: clamp(12px, 1.8vh, 15px); margin-top: .5vh; }
-.w-lh b { color: var(--fg); font-weight: 500; }
-.w-meta { display: flex; flex-wrap: wrap; gap: .3em 1.4em; color: var(--muted); font-size: clamp(12px, 1.9vh, 16px); }
-.w-meta b { color: var(--fg); font-weight: 500; font-family: var(--f-digit); }
-.w-meta .w-time { margin-left: auto; }
 .w-empty { color: var(--muted); font-size: clamp(14px, 2.1vh, 18px); display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 
 /* 멈춰 있는 동안(시간을 맞췄지만 시작 전, 또는 일시정지)은 빨간 칸과 남은 시간이 천천히 숨 쉬듯 흐려졌다 돌아온다. 돌아가는 중에는 가만히 있음 */
@@ -593,18 +594,31 @@ body.ringing .ring .now, body.ringing .ring .timer { animation: text-blink 1s st
     }
     var c = w.current, dl = w.daily, t = new Date(w.fetchedAt);
     var lo = Math.round(dl.temperature_2m_min[0]), hi = Math.round(dl.temperature_2m_max[0]), now = Math.round(c.temperature_2m);
-    // 막대 위 주황 칸: 오늘 최저~최고 사이에서 지금 기온의 위치
-    var pos = hi > lo ? Math.min(1, Math.max(0, (c.temperature_2m - dl.temperature_2m_min[0]) / (dl.temperature_2m_max[0] - dl.temperature_2m_min[0]))) : 0.5;
+    // 날짜 칸은 직선, 날씨는 곡선: 큰 기온 + 상태, 그 아래 앞으로 8시간 기온 곡선
     el.innerHTML =
-      '<div class="w-head"><span>' + placeLabel(settings.place) + '</span></div>' +
-      '<div class="w-main">' + weatherIcon(c.weather_code, c.is_day !== 0) + '<div class="w-temp">' + now + '°</div>' +
-      '<div><div class="w-cond">' + (WMO[c.weather_code] || '알 수 없음') + '</div>' +
-      '<div class="w-bar"><i style="left:' + (9 + pos * 82).toFixed(1) + '%"></i></div>' +
-      '<div class="w-lh"><span>최저 <b>' + lo + '°</b></span><span>최고 <b>' + hi + '°</b></span></div></div></div>' +
-      '<div class="w-meta"><span>체감 <b>' + Math.round(c.apparent_temperature) + '°</b></span>' +
-      '<span>습도 <b>' + c.relative_humidity_2m + '%</b></span>' +
-      (w.rain3h != null ? '<span>3시간 내 강수확률 <b>' + w.rain3h + '%</b></span>' : '') +
-      '<span class="w-time">' + pad(t.getHours()) + ':' + pad(t.getMinutes()) + ' 기준' + (note ? ' · ' + note : '') + '</span></div>';
+      '<div class="w-head">' + placeLabel(settings.place) + ' · ' + pad(t.getHours()) + ':' + pad(t.getMinutes()) + ' 기준' + (note ? ' · ' + note : '') + '</div>' +
+      '<div class="w-top">' +
+        '<div class="w-num">' + now + '°</div>' +
+        '<div class="w-cond">' + weatherIcon(c.weather_code, c.is_day !== 0) + (WMO[c.weather_code] || '알 수 없음') + '</div>' +
+        '<div class="w-meta">' + lo + '° / ' + hi + '°' + (w.rain3h != null ? ' · 비 ' + w.rain3h + '%' : '') + '</div>' +
+      '</div>' + tempCurve(w.temps, w.hours);
+  }
+  // 앞으로 8시간 기온 곡선. 첫 점(지금)만 주황, 기온 숫자는 한 칸 건너 하나씩, 아래에 시각
+  function tempCurve(temps, hours) {
+    if (!temps || temps.length < 2) return '';
+    var W = 500, H = 92, n = temps.length;
+    var mn = Math.min.apply(null, temps), mx = Math.max.apply(null, temps);
+    if (mx - mn < 4) { var mid = (mx + mn) / 2; mn = mid - 2; mx = mid + 2; }   // 거의 변화가 없을 때 선이 요동쳐 보이지 않게
+    var x = function (i) { return 16 + i * (W - 32) / (n - 1); };
+    var y = function (v) { return 22 + (mx - v) / (mx - mn) * (H - 52); };
+    var d = temps.map(function (v, i) { return (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(v).toFixed(1); }).join(' ');
+    var s = '<path class="sp-line" d="' + d + '"/>';
+    temps.forEach(function (v, i) {
+      s += '<circle class="' + (i ? 'sp-dot' : 'sp-now') + '" cx="' + x(i).toFixed(1) + '" cy="' + y(v).toFixed(1) + '" r="' + (i ? 2.6 : 4.6) + '"/>';
+      if (i % 2 === 0) s += '<text class="sp-val" x="' + x(i).toFixed(1) + '" y="' + (y(v) - 10).toFixed(1) + '">' + Math.round(v) + '°</text>';
+      s += '<text class="sp-hr" x="' + x(i).toFixed(1) + '" y="' + (H - 4) + '">' + (i ? hours[i] + '시' : '지금') + '</text>';
+    });
+    return '<svg class="w-curve" viewBox="0 0 ' + W + ' ' + H + '" aria-label="앞으로 8시간 기온">' + s + '</svg>';
   }
   function loadWeather() {
     clearTimeout(weatherT);
@@ -617,11 +631,15 @@ body.ringing .ring .now, body.ringing .ring .timer { animation: text-blink 1s st
     var url = 'https://api.open-meteo.com/v1/forecast?latitude=' + p.latitude + '&longitude=' + p.longitude +
       '&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,is_day' +
       '&daily=temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=1' +
-      // 강수확률은 "오늘 최대값"이 아니라 지금 시각부터 4개 시간 칸(약 3시간)만 받는다. 지난 새벽 값이 하루 종일 남는 문제 때문
-      '&hourly=precipitation_probability&forecast_hours=4';
+      // 시간별 값은 지금 시각부터 8칸만 받는다: 기온은 곡선용 8칸 전부, 강수확률은 앞 4칸(약 3시간)의 최대값만 쓴다.
+      // (강수확률을 "오늘 최대값"으로 보면 지난 새벽 값이 하루 종일 남는 문제가 있었음)
+      '&hourly=precipitation_probability,temperature_2m&forecast_hours=8';
     fetch(url).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }).then(function (j) {
-      var pp = (j.hourly && j.hourly.precipitation_probability || []).filter(function (v) { return v != null; });
-      var w = { current: j.current, daily: j.daily, rain3h: pp.length ? Math.max.apply(null, pp) : null, fetchedAt: Date.now(), lat: p.latitude, lon: p.longitude };
+      var hr = j.hourly || {};
+      var pp = (hr.precipitation_probability || []).slice(0, 4).filter(function (v) { return v != null; });
+      var w = { current: j.current, daily: j.daily, rain3h: pp.length ? Math.max.apply(null, pp) : null,
+        hours: (hr.time || []).map(function (t) { return +t.slice(11, 13); }), temps: hr.temperature_2m || [],
+        fetchedAt: Date.now(), lat: p.latitude, lon: p.longitude };
       store.set('weather', w); renderWeather(w);
     }).catch(function () {
       renderWeather(cached, cached ? '새로고침 실패' : '날씨를 불러오지 못했어요. 인터넷 연결을 확인하세요.');
