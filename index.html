@@ -106,9 +106,10 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
 .side { min-height: 0; min-width: 0; border-left: 1px solid var(--side-rule); padding: 0 0 0 var(--side-pad); display: flex; flex-direction: column; gap: max(var(--app-gap), 3.2vh * (1 - var(--cal-grow))); overflow: hidden; }
 /* 날짜: 일력처럼 큰 "일" 숫자 + 월·요일, 아래에 올해 지나간 비율 막대 */
 .side-top { display: flex; flex-direction: column; }
-.w-card { position: relative; }
-/* 버튼 둘레의 투명한 누름 영역만큼 바깥으로 당기되, 카드 여백이 0인 테마에서 패널 밖으로 나가 잘리지 않게 0 아래로는 안 내려감 */
-.w-card .icons { position: absolute; top: max(0px, calc(var(--card-pad) - 12px)); right: max(0px, calc(var(--card-pad) - 10px)); }
+/* 날씨는 맨 아래: 왼쪽·오른쪽을 나누는 세로선과 같은 회색 가로선으로 달력과 구분 */
+.w-card { position: relative; border-top: 1px solid var(--line); border-radius: 0; padding-top: 2.4vh; }
+/* 전체 화면·설정 버튼은 날씨 첫 줄(지역 이름) 오른쪽 끝. 패널 밖으로 나가 잘리지 않게 오른쪽은 0 아래로 안 내려감 */
+.w-card .icons { position: absolute; top: calc(2.4vh - 12px); right: max(0px, calc(var(--card-pad) - 10px)); }
 .day-block { display: flex; align-items: center; gap: clamp(10px, 1.6vw, 20px); }
 .yr-big { margin-left: auto; align-self: flex-end; text-align: right; }
 .yr-pct { font-size: clamp(30px, 6.4vh, 58px); font-weight: 800; line-height: 1; letter-spacing: -.02em; font-feature-settings: "tnum"; }
@@ -229,18 +230,6 @@ body.ringing .ring .now, body.ringing .ring .timer { animation: text-blink 1s st
   </section>
 
   <section class="side">
-    <div class="card w-card">
-      <div class="icons">
-        <button class="icon-btn" id="bFull" type="button" aria-label="전체 화면">
-          <svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
-        </button>
-        <button class="icon-btn" id="bSettings" type="button" aria-label="설정">
-          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
-        </button>
-      </div>
-      <div class="weather" id="weather"></div>
-    </div>
-
     <div class="side-top card">
       <div class="day-block">
         <div class="day" id="dDay"></div>
@@ -255,6 +244,18 @@ body.ringing .ring .now, body.ringing .ring .timer { animation: text-blink 1s st
     </div>
 
     <div class="cal card" id="cal" aria-label="이번 달 달력"></div>
+
+    <div class="card w-card">
+      <div class="icons">
+        <button class="icon-btn" id="bFull" type="button" aria-label="전체 화면">
+          <svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+        </button>
+        <button class="icon-btn" id="bSettings" type="button" aria-label="설정">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+        </button>
+      </div>
+      <div class="weather" id="weather"></div>
+    </div>
   </section>
 </div>
 
