@@ -81,7 +81,17 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
 .ring .ampm { fill: var(--muted); font-size: 7px; letter-spacing: 1px; }
 .ring .timer { fill: var(--accent); font-family: var(--f-digit); font-size: 15px; font-weight: 800; font-feature-settings: "tnum"; }
 
-.controls { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+/* 타이머 아래 조작 줄: 테두리 없는 글자 버튼 한 줄 ("▶ 시작 · 초기화 | 5 10 25 50 분") */
+.controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 4px clamp(14px, 2.4vw, 28px); font-size: clamp(14px, 2vh, 18px); }
+.ctl { border: 0; background: transparent; padding: .6em .2em; cursor: pointer; color: var(--muted); font-size: inherit; }
+.ctl:hover { color: var(--fg); }
+.ctl-go { display: inline-flex; align-items: center; gap: .6em; color: var(--fg); font-weight: 600; }
+.go-dot { width: 2.2em; height: 2.2em; border-radius: 50%; background: var(--accent); display: grid; place-items: center; }
+.go-dot svg { width: .8em; height: .8em; fill: #fff; }
+.ctl-sep { width: 1px; height: 1em; background: var(--line); }
+.ctl-mins { display: inline-flex; align-items: center; gap: clamp(4px, .9vw, 12px); }
+.ctl-min { color: var(--fg); font-weight: 600; padding: .6em .45em; }
+.ctl-unit { color: var(--muted); }
 .btn { border: 1px solid var(--line); background: transparent; border-radius: 999px; padding: .55em 1.15em; font-size: clamp(14px, 2vh, 18px); cursor: pointer; }
 .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 500; min-width: 6.5em; }
 .btn.chip { font-family: var(--f-digit); color: var(--muted); font-size: clamp(13px, 1.8vh, 16px); padding: .45em .95em; }
@@ -197,12 +207,19 @@ body.ringing .ring .now, body.ringing .ring .timer { animation: text-blink 1s st
       <text id="tTimer" class="timer" x="0" y="29" text-anchor="middle">00:00</text>
     </svg>
     <div class="controls">
-      <button class="btn primary" id="bStart" type="button">시작</button>
-      <button class="btn" id="bReset" type="button">초기화</button>
-      <button class="btn chip" type="button" data-min="5">5분</button>
-      <button class="btn chip" type="button" data-min="10">10분</button>
-      <button class="btn chip" type="button" data-min="25">25분</button>
-      <button class="btn chip" type="button" data-min="50">50분</button>
+      <button class="ctl ctl-go" id="bStart" type="button">
+        <i class="go-dot" aria-hidden="true"><svg viewBox="0 0 12 12"><path id="goIcon" d="M3 1.5v9l7.5-4.5z"/></svg></i>
+        <span id="bStartLabel">시작</span>
+      </button>
+      <button class="ctl" id="bReset" type="button">초기화</button>
+      <span class="ctl-sep" aria-hidden="true"></span>
+      <span class="ctl-mins">
+        <button class="ctl ctl-min" type="button" data-min="5" aria-label="5분">5</button>
+        <button class="ctl ctl-min" type="button" data-min="10" aria-label="10분">10</button>
+        <button class="ctl ctl-min" type="button" data-min="25" aria-label="25분">25</button>
+        <button class="ctl ctl-min" type="button" data-min="50" aria-label="50분">50</button>
+        <span class="ctl-unit">분</span>
+      </span>
     </div>
   </section>
 
@@ -445,7 +462,9 @@ body.ringing .ring .now, body.ringing .ring .timer { animation: text-blink 1s st
     }
     prevMins = mins;
     for (var k = 0; k < 60; k++) segEls[k].classList.toggle('on', k < mins);
-    $('#bStart').textContent = timer.status === 'running' ? '일시정지' : timer.status === 'done' ? '끄기' : '시작';
+    $('#bStartLabel').textContent = timer.status === 'running' ? '일시정지' : timer.status === 'done' ? '끄기' : '시작';
+    // 동그라미 안 그림: 돌아가는 중이면 일시정지(두 줄), 아니면 재생(삼각형)
+    $('#goIcon').setAttribute('d', timer.status === 'running' ? 'M2.5 1.5h2.5v9H2.5zM7 1.5h2.5v9H7z' : 'M3 1.5v9l7.5-4.5z');
     document.body.classList.toggle('paused', timer.status === 'paused' && rem > 0 && !drag);
 
     var dayKey = d.getFullYear() + '-' + d.getMonth() + '-' + d.getDate();
