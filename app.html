@@ -177,13 +177,18 @@ body.ringing .ring .now, body.ringing .ring .timer { animation: text-blink 1s st
 .seg-ctl input:focus-visible + label { outline: 2px solid var(--accent); outline-offset: -2px; }
 .sheet .foot { display: flex; justify-content: flex-end; }
 
+/* 세로 화면: 심플하게 "큰 타이머 + 날짜"만. 달력·날씨·올해 진행률은 가로로 돌렸을 때만 보인다 (ADR 0012) */
 @media (max-aspect-ratio: 1/1), (max-width: 700px) {
-  body { overflow: auto; height: auto; }
-  .app { grid-template-columns: 1fr; height: auto; gap: 24px; }
-  .clock { padding-right: var(--card-pad); }
-  .ring { width: min(100%, 520px); }
-  .side { border-left: 0; border-top: 1px solid var(--side-rule); padding: max(0px, 24px - var(--card-pad) * 99) 0 0; }
-  .weather { margin-top: 0; }
+  .app { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr) auto; }
+  .clock { padding-right: 0; }
+  .ring { width: min(100%, 64vh); }
+  .side { border-left: 0; padding: 2vh 0 1vh; align-items: center; }
+  .side-top .yr-big, .year-line, .year-ticks, .cal, .w-card #weather { display: none; }
+  .day { font-size: clamp(88px, 13vh, 170px); }
+  .day-side { font-size: clamp(26px, 4vh, 48px); }
+  /* 날씨 칸을 숨겨도 전체 화면·설정 버튼은 화면 오른쪽 위에 남긴다 */
+  .w-card { border-top: 0; padding: 0; position: static; }
+  .w-card .icons { position: fixed; top: calc(12px + env(safe-area-inset-top, 0px)); right: max(12px, env(safe-area-inset-right, 0px)); }
 }
 @media (prefers-reduced-motion: reduce) {
   .ring .seg.fold { animation: none; }
